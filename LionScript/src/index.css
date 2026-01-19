@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Inter:wght@300;400;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-primary-main: #1A237E;
+  --color-primary-dark: #000051;
+  --color-primary-light: #534bae;
+
+  --color-background-default: #000000;
+  --color-background-paper: #121212;
+
+  --font-sans: 'Inter', 'Cairo', sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
+  color: #ffffff;
+}
