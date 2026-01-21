@@ -3,10 +3,9 @@ import { Box, Typography, Button, CircularProgress, Avatar, Popover, Divider, al
 import CodeIcon from '@mui/icons-material/Code';
 import SendIcon from '@mui/icons-material/Send';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 const Network = () => {
-  // حالات البيانات
   const [lang, setLang] = useState("ar");
   const [status, setStatus] = useState("...");
   const [messages, setMessages] = useState([]); 
@@ -17,8 +16,6 @@ const Network = () => {
     themeColor: '#3b82f6' 
   });
   const [loading, setLoading] = useState(true);
-  
-  // حالات المربع المنبثق (Popover)
   const [anchorEl, setAnchorEl] = useState(null);
   const isPopoverOpen = Boolean(anchorEl);
 
@@ -26,11 +23,9 @@ const Network = () => {
   const wsRef = useRef(null);
   const logRef = useRef(null);
 
-  // فتح وإغلاق المربع المنبثق
   const handleAvatarClick = (event) => setAnchorEl(event.currentTarget);
   const handleAvatarClose = () => setAnchorEl(null);
 
-  // 1. جلب بيانات المستخدم الشخصية
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
@@ -42,7 +37,7 @@ const Network = () => {
         }
 
         const user = JSON.parse(localData);
-        const userId = user.email.replace(/[@.]/g, '_');
+        const userId = user.id || user.email.replace(/[@.]/g, '_');
 
         const response = await fetch(`${API_URL}/users/${userId}`);
         if (response.ok) {
@@ -67,41 +62,55 @@ const Network = () => {
     fetchUserData();
   }, []);
 
-  // 2. منطق الـ WebSocket وتصفية رسائل النظام
   useEffect(() => {
     if (loading) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.hostname;
-    const ws = new WebSocket(`${protocol}//${host}:3001`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setStatus("connected");
-      if (userData.name) {
-        ws.send(JSON.stringify({ type: "set_name", name: userData.name }));
-      }
-    };
-
-    ws.onclose = () => setStatus("disconnected");
-
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        
-        // منع ظهور رسائل النظام (انضم/غادر/دخل/خرج)
-        if (msg.type !== "system") {
-          setMessages((prev) => [...prev, msg]);
+    // البحث عن البورت من health API
+    const findPort = async () => {
+      const ports = [3001, 3002, 3003, 3004, 3005];
+      for (const port of ports) {
+        try {
+          const res = await fetch(`http://localhost:${port}/api/health`);
+          if (res.ok) return port;
+        } catch (err) {
+          continue;
         }
-      } catch (err) {
-        console.error("Parse Error", err);
       }
+      return 3003; // افتراضي
     };
 
-    return () => ws.close();
+    const connectWebSocket = async () => {
+      const port = await findPort();
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${protocol}//localhost:${port}`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setStatus("connected");
+        if (userData.name) {
+          ws.send(JSON.stringify({ type: "set_name", name: userData.name }));
+        }
+      };
+
+      ws.onclose = () => setStatus("disconnected");
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type !== "system") {
+            setMessages((prev) => [...prev, msg]);
+          }
+        } catch (err) {
+          console.error("Parse Error", err);
+        }
+      };
+    };
+
+    connectWebSocket();
+
+    return () => wsRef.current?.close();
   }, [userData.name, loading]);
 
-  // التمرير التلقائي لأسفل المحادثة
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -138,7 +147,6 @@ const Network = () => {
       position: 'relative'
     }}>
       
-      {/* --- HEADER --- */}
       <Box sx={{ 
         p: 2, px: 4, display: "flex", alignItems: "center", justifyContent: "space-between",
         borderBottom: "1px solid rgba(255,255,255,0.05)", bgcolor: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(10px)", zIndex: 1
@@ -148,7 +156,6 @@ const Network = () => {
           <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: -0.5 }}>LIONSCRIPT</Typography>
         </Box>
 
-        {/* زر البروفايل في الهيدر */}
         <Box 
           onClick={handleAvatarClick}
           sx={{ 
@@ -164,7 +171,6 @@ const Network = () => {
           />
         </Box>
 
-        {/* المربع المنبثق عند الضغط */}
         <Popover
           open={isPopoverOpen}
           anchorEl={anchorEl}
@@ -196,7 +202,6 @@ const Network = () => {
         </Popover>
       </Box>
 
-      {/* --- MESSAGES LOG (تم حذف رسائل النظام منها) --- */}
       <Box 
         ref={logRef}
         sx={{ 
@@ -231,7 +236,6 @@ const Network = () => {
         })}
       </Box>
 
-      {/* --- INPUT AREA --- */}
       <Box sx={{ p: 3, bgcolor: "rgba(2, 6, 23, 0.8)", backdropFilter: "blur(10px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <Box sx={{ 
           maxWidth: "1000px", margin: "0 auto", display: "flex", gap: 2, alignItems: "center",

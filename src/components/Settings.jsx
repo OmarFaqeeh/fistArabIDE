@@ -3,7 +3,7 @@ import { Box, Typography, Paper, Switch, FormControlLabel, Grid, CircularProgres
 import { useApp } from '../contexts/AppContext';
 import { themeOptions } from '../theme';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 const Settings = () => {
     const { language, toggleLanguage, themeMode, changeTheme, t } = useApp();
@@ -12,7 +12,6 @@ const Settings = () => {
     const [success, setSuccess] = useState('');
     const [userId, setUserId] = useState(null);
 
-    // جلب بيانات المستخدم من Firebase عند التحميل
     useEffect(() => {
         const fetchUserSettings = async () => {
             setInitialLoading(true);
@@ -24,43 +23,39 @@ const Settings = () => {
                 }
 
                 const user = JSON.parse(userData);
-                if (!user.email) {
+                if (!user.email && !user.id) {
                     setInitialLoading(false);
                     return;
                 }
 
-                const id = user.email.replace(/[@.]/g, '_');
+                const id = user.id || user.email.replace(/[@.]/g, '_');
                 setUserId(id);
 
-                // جلب البيانات من Firebase
                 const response = await fetch(`${API_URL}/users/${id}`);
                 
                 if (response.ok) {
                     const result = await response.json();
                     
                     if (result.success && result.data) {
-                        // تحديث اللغة من Firebase
                         const savedLang = result.data.language || 'ar';
                         if (savedLang !== language) {
-                            toggleLanguage(); // تغيير اللغة إذا مختلفة
+                            toggleLanguage();
                         }
 
-                        // تحديث الثيم من Firebase
-                       // في useEffect
-const savedColor = result.data.themeColor;
-if (savedColor) {
-    const themeMap = {
-        '#007FFF': 'deepBlue',
-        '#FF0055': 'cyberRed',
-        '#00FF99': 'neonGreen',
-        '#B026FF': 'voidPurple',
-        '#FFD700': 'goldenEra',
-    };
-    const mappedTheme = themeMap[savedColor] || 'deepBlue';
-    if (mappedTheme !== themeMode) {
-        changeTheme(mappedTheme);
-    }
-}
+                        const savedColor = result.data.themeColor;
+                        if (savedColor) {
+                            const themeMap = {
+                                '#007FFF': 'deepBlue',
+                                '#FF0055': 'cyberRed',
+                                '#00FF99': 'neonGreen',
+                                '#B026FF': 'voidPurple',
+                                '#FFD700': 'goldenEra',
+                            };
+                            const mappedTheme = themeMap[savedColor] || 'deepBlue';
+                            if (mappedTheme !== themeMode) {
+                                changeTheme(mappedTheme);
+                            }
+                        }
 
                         console.log('✅ تم جلب الإعدادات من Firebase:', result.data);
                     }
@@ -75,7 +70,6 @@ if (savedColor) {
         fetchUserSettings();
     }, []);
 
-    // تحديث اللغة في Firebase
     const handleLanguageChange = async () => {
         const newLang = language === 'ar' ? 'en' : 'ar';
         
@@ -103,7 +97,6 @@ if (savedColor) {
         }
     };
 
-    // تحديث الثيم في Firebase
     const handleThemeChange = async (themeId) => {
         const selectedTheme = themeOptions.find(t => t.id === themeId);
         
@@ -131,7 +124,6 @@ if (savedColor) {
         }
     };
 
-    // شاشة تحميل أولية
     if (initialLoading) {
         return (
             <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>

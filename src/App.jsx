@@ -13,11 +13,66 @@ import Settings from './components/Settings';
 import Challenges from './components/Challenges';
 import Auth from './components/login';
 
-const AppContent = () => {
+// شاشة الترحيب
+const SplashScreen = () => {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        bgcolor: '#020617',
+        flexDirection: 'column',
+        gap: 4,
+        animation: 'upDown 1s ease-in-out infinite',
+        '@keyframes upDown': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-20px)' }
+        }
+      }}
+    >
+      <Box
+        sx={{
+          width: 170,
+          height: 170,
+          borderRadius: '50px',
+          overflow: 'hidden',
+          boxShadow: '0 0 40px rgba(59, 130, 246, 0.5)',
+          border: '3px solid #3b82f6'
+        }}
+      >
+        <img
+          src="/src/assets/lion-logo.jpg"
+          alt="LionScript Logo"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }}
+        />
+      </Box>
 
+      <Box
+        sx={{
+          textAlign: 'center',
+          color: 'white',
+          fontSize: '2rem',
+          fontWeight: 600,
+          letterSpacing: '0.4px',
+          fontFamily: '"JetBrains Mono", monospace'
+        }}
+      >
+        Welcome to <span style={{ color: '#3b82f6' }}>LionScript</span>
+      </Box>
+    </Box>
+  );
+};
+
+const AppContent = () => {
   const [sidebarWidth, setSidebarWidth] = useState(250);
+  const [showSplash, setShowSplash] = useState(true);
   
-  // 1. قراءة حالة تسجيل الدخول من localStorage عند بداية التشغيل
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('isLoggedIn') === 'true';
   });
@@ -30,15 +85,22 @@ const AppContent = () => {
   const { themeMode } = useApp();
   const currentTheme = getTheme(themeMode);
 
-  // 2. دالة تسجيل الدخول وحفظ البيانات في المتصفح
+  // إظهار شاشة الترحيب لمدة ثانيتين
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleLogin = (userData) => {
     setUser(userData);
     setIsLoggedIn(true);
-    localStorage.setItem('isLoggedIn', 'true'); // حفظ الحالة
-    localStorage.setItem('user', JSON.stringify(userData)); // حفظ بيانات المستخدم
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  // 3. دالة تسجيل الخروج (اختياري إذا أردت إضافتها لاحقاً في الإعدادات)
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUser(null);
@@ -46,6 +108,17 @@ const AppContent = () => {
     localStorage.removeItem('user');
   };
 
+  // إذا كانت شاشة الترحيب ظاهرة
+  if (showSplash) {
+    return (
+      <ThemeProvider theme={currentTheme}>
+        <CssBaseline />
+        <SplashScreen />
+      </ThemeProvider>
+    );
+  }
+
+  // إذا لم يكن المستخدم مسجل دخول
   if (!isLoggedIn) {
     return (
       <ThemeProvider theme={currentTheme}>
@@ -55,12 +128,13 @@ const AppContent = () => {
     );
   }
 
+  // إذا كان مسجل دخول - عرض التطبيق الرئيسي
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Router>
         <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-          <Header width={sidebarWidth} setWidth={setSidebarWidth} />
+          <Header width={sidebarWidth} setWidth={setSidebarWidth} onLogout={handleLogout} />
           <Box
             component="main"
             sx={{

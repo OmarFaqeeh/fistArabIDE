@@ -3,10 +3,9 @@ import { Box, Typography, Avatar, TextField, Button, Paper, CircularProgress, Al
 import SaveIcon from '@mui/icons-material/Save';
 import avatarImage from '../assets/avatar.png';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 const Profile = () => {
-    // حالات التخزين (States)
     const [name, setName] = useState('');
     const [bio, setBio] = useState('');
     const [loading, setLoading] = useState(true);
@@ -15,7 +14,6 @@ const Profile = () => {
     const [error, setError] = useState('');
     const [userId, setUserId] = useState(null);
 
-    // 1. جلب بيانات المستخدم عند تحميل الصفحة
     useEffect(() => {
         const fetchUserData = async () => {
             setLoading(true);
@@ -28,16 +26,14 @@ const Profile = () => {
                 }
 
                 const user = JSON.parse(userData);
-                const id = user.email.replace(/[@.]/g, '_');
+                const id = user.id || user.email.replace(/[@.]/g, '_');
                 setUserId(id);
 
-                // جلب البيانات من الـ API
                 const response = await fetch(`${API_URL}/users/${id}`);
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success && result.data) {
-                        // تعيين الاسم والوصف من قاعدة البيانات أو استخدام قيم افتراضية
-                        setName(result.data.name || "عمر أحمد");
+                        setName(result.data.name || "Developer");
                         setBio(result.data.description || "LionScript Developer");
                     }
                 }
@@ -52,7 +48,6 @@ const Profile = () => {
         fetchUserData();
     }, []);
 
-    // 2. وظيفة حفظ التعديلات
     const handleSaveProfile = async () => {
         if (!userId) return;
 
@@ -64,7 +59,6 @@ const Profile = () => {
             const response = await fetch(`${API_URL}/users/${userId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                // نرسل الاسم والوصف الجديد لقاعدة البيانات
                 body: JSON.stringify({ 
                     name: name,
                     description: bio 
@@ -75,7 +69,6 @@ const Profile = () => {
 
             if (result.success) {
                 setSuccess('تم حفظ الملف الشخصي بنجاح ✅');
-                // تحديث الـ localStorage إذا كنت تخزن الاسم هناك أيضاً
                 const userData = JSON.parse(localStorage.getItem('userData'));
                 localStorage.setItem('userData', JSON.stringify({ ...userData, name }));
                 
