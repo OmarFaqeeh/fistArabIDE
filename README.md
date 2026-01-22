@@ -1,16 +1,75 @@
-# React + Vite
+# 🦁 LionScript Network
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Full-stack chat application with WebSocket real-time communication.
 
-Currently, two official plugins are available:
+## 📋 Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js (v16+)
+- npm or yarn
+- Anthropic API Key
 
-## React Compiler
+## 🚀 Installation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Clone the repository**
+```bash
+git clone https://github.com/YOUR_USERNAME/lionscript.git
+cd lionscript
+```
 
-## Expanding the ESLint configuration
+2. **Install dependencies**
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. **Setup environment variables**
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and add your API keys:
+```env
+ANTHROPIC_API_KEY=your_actual_key_here
+PORT=3000
+```
+
+4. **Run the development server**
+```bash
+npm run dev
+```
+
+5. **Open your browser**
+```
+http://localhost:5173
+```
+
+## 🔑 Getting API Keys
+
+1. Go to [Anthropic Console](https://console.anthropic.com)
+2. Create an account
+3. Generate an API key
+4. Add it to your `.env` file
+
+## 📁 Project Structure
+```
+├── public/          # Static files
+├── routes/          # API routes
+├── src/             # Frontend source
+├── controllers/     # Backend controllers
+├── config/          # Configuration files
+└── server.js        # Express server
+```
+
+## 🛠️ Built With
+
+- React + Vite
+- Express.js
+- WebSocket
+- Material-UI
+- Anthropic Claude API
+
+## 📝 License
+
+MIT
+
+## 👤 Author
+Omar ahmad

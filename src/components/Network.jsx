@@ -26,6 +26,26 @@ const Network = () => {
   const handleAvatarClick = (event) => setAnchorEl(event.currentTarget);
   const handleAvatarClose = () => setAnchorEl(null);
 
+  // استرجاع الرسائل من localStorage عند التحميل
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('chatMessages');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(parsed);
+      } catch (err) {
+        console.error('خطأ في قراءة الرسائل المحفوظة:', err);
+      }
+    }
+  }, []);
+
+  // حفظ الرسائل في localStorage عند أي تغيير
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
@@ -127,6 +147,12 @@ const Network = () => {
     }
   };
 
+  // وظيفة لحذف جميع الرسائل
+  const handleClearMessages = () => {
+    setMessages([]);
+    localStorage.removeItem('chatMessages');
+  };
+
   if (loading) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#020617' }}>
@@ -195,9 +221,23 @@ const Network = () => {
               {userData.description}
             </Typography>
             <Divider sx={{ width: '100%', my: 2, bgcolor: '#1e293b' }} />
-            <Typography variant="caption" sx={{ color: userData.themeColor }}>
+            <Typography variant="caption" sx={{ color: userData.themeColor, mb: 2 }}>
               {status === "connected" ? "متصل بالشبكة" : "منقطع"}
             </Typography>
+            <Button 
+              variant="outlined" 
+              onClick={handleClearMessages}
+              size="small"
+              sx={{ 
+                color: '#ef4444', 
+                borderColor: '#ef4444',
+                '&:hover': { 
+                  bgcolor: 'rgba(239, 68, 68, 0.1)',
+                  borderColor: '#dc2626'
+                }
+              }}
+            >
+Delete all messages            </Button>
           </Box>
         </Popover>
       </Box>
@@ -210,30 +250,42 @@ const Network = () => {
           '&::-webkit-scrollbar-thumb': { bgcolor: '#1e293b', borderRadius: '10px' }
         }}
       >
-        {messages.map((m, i) => {
-          const isMe = m.name === userData.name;
-          return (
-            <Box key={i} sx={{ 
-              display: "flex", flexDirection: "column", 
-              alignItems: isMe ? "flex-end" : "flex-start",
-              maxWidth: "80%", alignSelf: isMe ? "flex-end" : "flex-start"
-            }}>
-              <Typography variant="caption" sx={{ color: "#475569", mb: 0.5, mx: 1 }}>
-                {isMe ? (lang === 'ar' ? 'أنت' : 'You') : m.name}
-              </Typography>
-              <Box sx={{ 
-                p: 2, borderRadius: isMe ? "20px 4px 20px 20px" : "4px 20px 20px 20px",
-                bgcolor: isMe ? userData.themeColor : "#0f172a",
-                border: isMe ? "none" : "1px solid #1e293b",
-                boxShadow: isMe ? `0 4px 15px ${alpha(userData.themeColor, 0.2)}` : "none"
+        {messages.length === 0 ? (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            height: '100%',
+            color: '#475569'
+          }}>
+            <Typography variant="body2">There are no messages yet...</Typography>
+          </Box>
+        ) : (
+          messages.map((m, i) => {
+            const isMe = m.name === userData.name;
+            return (
+              <Box key={i} sx={{ 
+                display: "flex", flexDirection: "column", 
+                alignItems: isMe ? "flex-end" : "flex-start",
+                maxWidth: "80%", alignSelf: isMe ? "flex-end" : "flex-start"
               }}>
-                <Typography variant="body2" sx={{ color: "#fff", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                  {m.text}
+                <Typography variant="caption" sx={{ color: "#475569", mb: 0.5, mx: 1 }}>
+                  {isMe ? (lang === 'ar' ? 'you' : 'You') : m.name}
                 </Typography>
+                <Box sx={{ 
+                  p: 2, borderRadius: isMe ? "20px 4px 20px 20px" : "4px 20px 20px 20px",
+                  bgcolor: isMe ? userData.themeColor : "#0f172a",
+                  border: isMe ? "none" : "1px solid #1e293b",
+                  boxShadow: isMe ? `0 4px 15px ${alpha(userData.themeColor, 0.2)}` : "none"
+                }}>
+                  <Typography variant="body2" sx={{ color: "#fff", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                    {m.text}
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
-          );
-        })}
+            );
+          })
+        )}
       </Box>
 
       <Box sx={{ p: 3, bgcolor: "rgba(2, 6, 23, 0.8)", backdropFilter: "blur(10px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
@@ -243,7 +295,7 @@ const Network = () => {
         }}>
           <input
             ref={textInputRef}
-            placeholder="اكتب رسالة..."
+            placeholder="Write a letter..."
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             style={{
               flex: 1, background: "transparent", border: "none", color: "white",
