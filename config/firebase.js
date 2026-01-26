@@ -4,14 +4,22 @@ import { readFileSync } from 'fs';
 
 dotenv.config();
 
-// قراءة ملف serviceAccountKey
-const serviceAccount = JSON.parse(
-  readFileSync('./serviceAccountKey.json', 'utf8')
-);
+let serviceAccount;
+
+try {
+  const raw = readFileSync('./serviceAccountKey.json', 'utf8');
+  const cleaned = raw.replace(/^\uFEFF/, ''); // إزالة BOM إن وجد
+  serviceAccount = JSON.parse(cleaned);
+} catch (err) {
+  console.error('⛔ Failed to load Firebase service account JSON.');
+  console.error('Make sure ./serviceAccountKey.json exists and is valid JSON.');
+  console.error(err);
+  process.exit(1);
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
 });
 
 const db = admin.firestore();

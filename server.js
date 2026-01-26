@@ -19,23 +19,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// ✅ CORS Configuration - Fixed for Production
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? true  // في Production: اسمح لكل المصادر
-  : [
-      'http://localhost:3003',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:5175',
-      'http://localhost:5176',
-      'http://localhost:5177'
-    ];
-
 app.use(cors({
-  origin: allowedOrigins,
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177'],
   credentials: true
 }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
