@@ -7,6 +7,10 @@ import WebSocket, { WebSocketServer } from "ws";
 import { fileURLToPath } from "url";
 import userRoutes from "./routes/userRoutes.js";
 import fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execPromise = promisify(exec);
 
 dotenv.config();
 
@@ -15,28 +19,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// تحديث CORS للسماح بالدومينات المختلفة
-const allowedOrigins = [
-  'http://localhost:3001',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'http://localhost:5176',
-  'http://localhost:5177',
-  process.env.FRONTEND_URL // إضافة رابط Frontend من Environment Variables
-].filter(Boolean);
-
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: ['http://localhost:3001', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177'],
   credentials: true
 }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -46,9 +32,8 @@ app.get("/api/health", (req, res) => {
   res.json({
     message: "مرحباً! السيرفر يعمل 🚀",
     status: "ok",
-    port: process.env.PORT || 3001,
+    port: server.address()?.port,
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
     endpoints: [
       "POST /api/users/login - تسجيل الدخول",
       "POST /api/users/:userId - إنشاء حساب جديد",
@@ -141,13 +126,11 @@ wss.on("connection", (ws) => {
   });
 });
 
-// تقديم الملفات الثابتة (Static Files)
 const distPath = path.join(__dirname, "dist");
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 }
 
-// توجيه جميع الطلبات إلى index.html (للـ SPA)
 app.use((req, res, next) => {
   if (req.path.startsWith("/api")) {
     return next();
@@ -162,7 +145,6 @@ app.use((req, res, next) => {
   }
 });
 
-// معالجة الصفحات غير الموجودة
 app.use((req, res) => {
   res.status(404).json({ 
     success: false, 
@@ -170,7 +152,6 @@ app.use((req, res) => {
   });
 });
 
-// معالجة الأخطاء العامة
 app.use((err, req, res, next) => {
   console.error("❌ خطأ في السيرفر:", err);
   res.status(500).json({ 
@@ -179,25 +160,93 @@ app.use((err, req, res, next) => {
   });
 });
 
-// إعدادات البورت للـ Production
-const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || '0.0.0.0';
+// 🔥 قتل البروسس القديم على البورت تلقائياً (Windows فقط)
+async function killProcessOnPort(port) {
+  try {
+    const { stdout } = await execPromise(`netstat -ano | findstr :${port}`);
+    const lines = stdout.split('\n');
+    
+    for (const line of lines) {
+      if (line.includes('LISTENING')) {
+        const parts = line.trim().split(/\s+/);
+        const pid = parts[parts.length - 1];
+        
+        if (pid && !isNaN(pid)) {
+          console.log(`🔪 قتل البروسس ${pid} على البورت ${port}...`);
+          await execPromise(`taskkill /PID ${pid} /F`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return true;
+        }
+      }
+    }
+  } catch (err) {
+    // تجاهل الأخطاء - قد لا يكون هناك بروسس
+  }
+  return false;
+}
 
-server.listen(PORT, HOST, () => {
-  console.log('\n' + '='.repeat(60));
-  console.log(`✅ السيرفر شغال على http://${HOST}:${PORT}`);
-  console.log(`🌐 API متاح على http://${HOST}:${PORT}/api`);
-  console.log(`🔌 WebSocket متاح على ws://${HOST}:${PORT}`);
-  console.log(`💚 Health Check: http://${HOST}:${PORT}/api/health`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('='.repeat(60) + '\n');
-});
+// البحث عن بورت متاح
+const PORT_FILE = path.join(__dirname, '.port');
+const PUBLIC_PORT_FILE = path.join(__dirname, 'public', '.port');
+const START_PORT = process.env.PORT || 3001;
+const MAX_PORT = START_PORT + 20;
 
-// معالجة إشارات الإيقاف
+async function findAvailablePort(startPort) {
+  let currentPort = parseInt(startPort);
+  
+  while (currentPort <= MAX_PORT) {
+    try {
+      // محاولة قتل البروسس القديم أولاً
+      if (currentPort === parseInt(START_PORT)) {
+        await killProcessOnPort(currentPort);
+      }
+      
+      await new Promise((resolve, reject) => {
+        const testServer = http.createServer();
+        
+        testServer.once('error', (err) => {
+          if (err.code === 'EADDRINUSE') {
+            reject(err);
+          } else {
+            reject(err);
+          }
+        });
+        
+        testServer.once('listening', () => {
+          testServer.close(() => {
+            resolve();
+          });
+        });
+        
+        testServer.listen(currentPort);
+      });
+      
+      return currentPort;
+    } catch (err) {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`⚠️  البورت ${currentPort} مستخدم، جاري تجربة ${currentPort + 1}...`);
+        currentPort++;
+      } else {
+        throw err;
+      }
+    }
+  }
+  
+  throw new Error(`لم يتم العثور على بورت متاح بين ${startPort} و ${MAX_PORT}`);
+}
+
+
+
 process.on('SIGTERM', () => {
   console.log('⚠️ تلقي إشارة SIGTERM، إيقاف السيرفر...');
   server.close(() => {
     console.log('✅ تم إيقاف السيرفر بنجاح');
+    if (fs.existsSync(PORT_FILE)) {
+      fs.unlinkSync(PORT_FILE);
+    }
+    if (fs.existsSync(PUBLIC_PORT_FILE)) {
+      fs.unlinkSync(PUBLIC_PORT_FILE);
+    }
     process.exit(0);
   });
 });
@@ -206,16 +255,12 @@ process.on('SIGINT', () => {
   console.log('\n⚠️ تلقي إشارة SIGINT، إيقاف السيرفر...');
   server.close(() => {
     console.log('✅ تم إيقاف السيرفر بنجاح');
+    if (fs.existsSync(PORT_FILE)) {
+      fs.unlinkSync(PORT_FILE);
+    }
+    if (fs.existsSync(PUBLIC_PORT_FILE)) {
+      fs.unlinkSync(PUBLIC_PORT_FILE);
+    }
     process.exit(0);
   });
-});
-
-// معالجة الأخطاء غير المتوقعة
-process.on('uncaughtException', (error) => {
-  console.error('❌ خطأ غير متوقع:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Promise مرفوض بدون معالجة:', promise, 'السبب:', reason);
 });
